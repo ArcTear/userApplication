@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/demo_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+  application:
+    name: ${APP_NAME:MyApp}
+    mode: ${APP_MODE:development}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}

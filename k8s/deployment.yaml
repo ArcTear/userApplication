@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kotlin-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kotlin-app
+  template:
+    metadata:
+      labels:
+        app: kotlin-app
+    spec:
+      containers:
+        - name: kotlin-app
+          image: kotlin-app:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/demo_db
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD
+            - name: APP_MODE
+              valueFrom:
+                  configMapKeyRef:
+                    name: app-config
+                    key: APP_MODE
+            - name: APP_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_VERSION
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: LOG_LEVEL
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5

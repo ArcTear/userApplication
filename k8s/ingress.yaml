@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kotlin-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  labels:
+    app: kotlin-app
+spec:
+  tls:
+    - hosts:
+        - kotlin.local
+      secretName: kotlin-local-tls
+  rules:
+    - host: kotlin.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kotlin-app
+                port:
+                  number: 80
