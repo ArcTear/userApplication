@@ -1,0 +1,37 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  debug:
+    verbosity: detailed  # Уровень детализации для отладки
+  prometheus:
+    endpoint: "0.0.0.0:9091"  # OpenTelemetry Collector будет слушать на порту 9091
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+
+processors:
+  batch:
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]  # Отправляем метрики в Prometheus
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [loki]
