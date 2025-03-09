@@ -1,169 +1,117 @@
-# Kotlin Spring Boot Application on Minikube
+# Spring Boot приложение с Grafana, Prometheus, Loki и OpenTelemetry
 
-This guide explains how to deploy a Kotlin Spring Boot application in Minikube and verify its functionality using an Ingress controller.
+Этот проект представляет собой Spring Boot приложение, интегрированное с Grafana, Prometheus, Loki и OpenTelemetry для сбора и визуализации метрик, логов и трейсов.
 
----
+## Описание функционала
 
-## Prerequisites
+1. **Сбор метрик с помощью Prometheus:**
+   - Приложение предоставляет метрики через эндпоинт `/actuator/prometheus`.
+   - Prometheus собирает эти метрики и сохраняет их для дальнейшего анализа.
 
-1. **Installed Tools**:
-   - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-   - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-   - [Docker](https://www.docker.com/)
-   - [Colima](https://github.com/abiosoft/colima) (if using it for Docker)
-2. **Resources**:
-   - At least 2 CPUs and 4GB RAM allocated to Minikube.
+2. **Сбор логов с помощью Loki:**
+   - Логи приложения отправляются в Loki через драйвер Docker или напрямую через конфигурацию приложения.
 
----
+3. **Визуализация данных в Grafana:**
+   - Grafana подключена к Prometheus и Loki для визуализации метрик и логов.
+   - В Grafana настроены дашборды для отображения RPS (Request Per Second) и SPR (Seconds Per Request).
 
-## Steps to Run the Application
+4. **Трейсинг с помощью OpenTelemetry:**
+   - OpenTelemetry Collector собирает трейсы и отправляет их в Jaeger или другой бэкенд для анализа.
 
-### 1. Start Minikube
-
-Start Minikube with the necessary resources and addons:
-```bash
-minikube start --memory=4096 --cpus=2 --addons=ingress
-```
+5. **Развертывание в Docker Compose:**
+   - Все сервисы (приложение, Prometheus, Loki, Grafana, OpenTelemetry Collector) развернуты с помощью Docker Compose.
 
 ---
 
-### 2. Build and Load the Docker Image
+## Как протестировать функционал
 
-#### a. Use Minikube’s Docker Environment
-Ensure the Docker commands are executed in Minikube's Docker environment:
-```bash
-eval $(minikube docker-env)
-```
+### 1. Запуск приложения и сервисов
 
-#### b. Build the Docker Image
-Build the application image:
-```bash
-docker build -t kotlin-app:latest .
-```
+1. Убедитесь, что у вас установлены Docker и Docker Compose.
 
-#### c. Verify the Image
-Ensure the image is listed in Minikube’s Docker environment:
-```bash
-docker images
-```
+2. Клонируйте репозиторий:
 
----
-
-### 3. Apply Kubernetes Manifests
-
-Place all your Kubernetes manifests (e.g., deployment, service, ingress) in the `k8s/` folder.
-
-Example directory structure:
-```
-k8s/
-  ├── deployment.yaml
-  ├── service.yaml
-  ├── ingress.yaml
-```
-
-Apply all manifests at once:
-```bash
-kubectl apply -f k8s/
-```
-
----
-
-### 4. Verify the Deployment
-
-#### a. Check Pods
-Ensure the pods are running:
-```bash
-kubectl get pods
-```
-
-#### b. Check Services
-Verify the services are created:
-```bash
-kubectl get svc
-```
-
-#### c. Check Ingress
-Verify the Ingress is configured:
-```bash
-kubectl get ingress
-```
-
-Expected output:
-```
-NAME             CLASS    HOSTS           ADDRESS        PORTS   AGE
-kotlin-ingress   <none>   kotlin.local    192.168.49.2   80      1m
-```
-
----
-
-### 5. Configure Host Mapping
-
-Update your `/etc/hosts` file to map the Minikube IP to the hostname:
-```bash
-sudo nano /etc/hosts
-```
-
-Add the following line, replacing `<minikube-ip>` with the output of `minikube ip`:
-```
-127.0.0.1 kotlin.local
-```
-
-Save and exit the editor.
-
----
-
-### 6. Verify the Application
-
-#### a. Start the Minikube Tunnel
-Run the Minikube tunnel to expose the Ingress service:
-```bash
-minikube tunnel
-```
-
-#### b. Test the Application
-Access the application in your browser or with `curl`:
-```bash
-curl http://kotlin.local
-```
-
----
-
-## Troubleshooting
-
-1. **Check Pod Logs**:
    ```bash
-   kubectl logs -l app=kotlin-app
+   git clone <ваш-репозиторий>
+   cd <ваш-репозиторий>
    ```
 
-2. **Inspect Ingress**:
+3. Запустите все сервисы с помощью Docker Compose:
+
    ```bash
-   kubectl describe ingress kotlin-ingress
+   docker-compose up --build
    ```
 
-3. **Verify Minikube Status**:
-   ```bash
-   minikube status
-   ```
-
-4. **Debug Events**:
-   ```bash
-   kubectl get events --sort-by='.metadata.creationTimestamp'
-   ```
+   После запуска все сервисы будут доступны по следующим адресам:
+   - Приложение: `http://localhost:8080`
+   - Prometheus: `http://localhost:9090`
+   - Grafana: `http://localhost:3000`
+   - Loki: `http://localhost:3100`
+   - OpenTelemetry Collector: `http://localhost:4317` (OTLP gRPC)
 
 ---
 
-## Clean Up
+### 2. Тестирование метрик
 
-To stop and clean up the Minikube cluster:
-```bash
-minikube delete
-```
+1. Откройте Prometheus (`http://localhost:9090`) и проверьте, что метрики собираются:
+   - Введите запрос, например, `http_server_requests_seconds_count`, чтобы увидеть количество HTTP-запросов.
+
+2. Откройте Grafana (`http://localhost:3000`) и проверьте дашборды:
+   - Используйте логин `admin` и пароль `admin`.
+   - Перейдите в раздел "Dashboards" и откройте дашборд для метрик (например, "Spring Boot Metrics").
+   - Убедитесь, что отображаются метрики RPS и SPR.
 
 ---
 
-## Additional Notes
+### 3. Тестирование логов
 
-- Ensure Colima or other Docker environments do not conflict with Minikube's Docker daemon.
-- Use `kubectl get all` to see all resources related to the application.
+1. Отправьте несколько запросов в приложение, чтобы сгенерировать логи:
+   - Например, используйте `curl` для создания пользователя:
+     ```bash
+     curl -X POST -H "Content-Type: application/json" -d '{"name": "John", "email": "john@example.com"}' http://localhost:8080/api/users
+     ```
 
-This completes the deployment of the Kotlin Spring Boot application in Minikube with Ingress.
+2. Откройте Grafana и перейдите в раздел "Explore":
+   - Выберите источник данных Loki.
+   - Введите запрос, например, `{container_name="demo-app"}`, чтобы увидеть логи приложения.
+
+---
+
+### 4. Тестирование трейсинга
+
+1. Убедитесь, что OpenTelemetry Collector настроен для отправки трейсов в Jaeger или другой бэкенд.
+
+2. Отправьте несколько запросов в приложение, чтобы сгенерировать трейсы.
+
+3. Откройте Jaeger (если используется) и проверьте трейсы:
+   - Убедитесь, что трейсы корректно отображаются и содержат информацию о запросах.
+
+---
+
+### 5. Тестирование в Kubernetes (опционально)
+
+Если вы развернули приложение в Kubernetes, выполните следующие шаги:
+
+1. Убедитесь, что Prometheus, Loki и Grafana развернуты в кластере.
+
+2. Проверьте, что метрики и логи собираются:
+   - Используйте `kubectl port-forward` для доступа к сервисам:
+     ```bash
+     kubectl port-forward svc/prometheus 9090:9090
+     kubectl port-forward svc/grafana 3000:3000
+     kubectl port-forward svc/loki 3100:3100
+     ```
+
+3. Проверьте дашборды в Grafana и логи в Loki, как описано выше.
+
+---
+
+## Дополнительные баллы
+
+### Использование OpenTelemetry в Kubernetes
+
+1. Убедитесь, что OpenTelemetry Collector развернут в кластере и настроен для сбора трейсов.
+
+2. Проверьте, что трейсы отправляются в Jaeger или другой бэкенд.
+
+3. Убедитесь, что трейсы корректно отображаются в Jaeger.
